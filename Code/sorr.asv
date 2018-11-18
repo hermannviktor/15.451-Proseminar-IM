@@ -1,0 +1,8 @@
+function [sorr] = sorr(ret_tot, w)
+%Calculate SORR
+%   Find reliable measure
+
+sorr = mean(ret_tot(;
+
+end
+
