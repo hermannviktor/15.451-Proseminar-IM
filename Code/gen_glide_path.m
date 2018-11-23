@@ -13,7 +13,7 @@ glide_path{1,1} = nan(n, 2);
 glide_path{1,1}(:,1) = 0.3;
 glide_path{1,1}(:,2) = 0.7;
 
-a = 0.3;
+a = 0.2;
 b = 1-a;
 c = (b-a)/(n-1);
 glide_path{2,1} = nan(n, 2);

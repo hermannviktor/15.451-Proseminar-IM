@@ -9,10 +9,10 @@ clear all;
 %% Input
 y = 30; % years in retirement
 n = y*12;
-x = 0.10; % amount taken out per period
+x = 0.2; % amount taken out per period
 e = 100000; % endowment
-w = 5; % years for sequence risk
-m = 10000; % number of return paths
+w = 10; % years for separating sequence risk
+m = 200000; % number of return paths
 
 %% Read Data
 [date, ret_e, ret_fi, infl] = import_data(); 
@@ -36,6 +36,7 @@ glide_path = gen_glide_path(n);
 % coverage ratio
 % first column sorr, second column coverage
 
+%{
 for i = 1:size(glide_path,1)
     for j = 1:size(ret_path,1)
         % diff weight for SORR
@@ -45,17 +46,40 @@ for i = 1:size(glide_path,1)
     ratio{i,1}(:,3) = ratio{i,1}(:,2)./ratio{i,1}(:,1);
     ratio_tot(i,1) = mean(ratio{i,1}(:,3));
 end
+%}
+
+for i = 1:size(ret_path,1)
+    ratio(i,1) = sorr(ret_path{i,1}(:,1), w, n);
+    for j = 1:size(glide_path,1)
+        % diff weight for SORR
+        ratio(i,j+1) = sum((wealth{i,j}>0))/n;
+    end
+end
+
+[ratio_plot(:,1), ~, ind] = unique(ratio(:,1));
+ratio_plot(:,2) = accumarray(ind, ratio(:,2), [], @mean);
+ratio_plot(:,3) = accumarray(ind, ratio(:,3), [], @mean);
+ratio_plot(:,4) = accumarray(ind, ratio(:,4), [], @mean);
 
 % utility function
 
 %% Plot
+
+figure(1);
+
+plot(ratio_plot(:,1), ratio_plot(:,2), ...
+    ratio_plot(:,1), ratio_plot(:,3), ...
+    ratio_plot(:,1), ratio_plot(:,4));
+title('Coverage ratio and sorr');
+legend('Normal', 'Conservative', 'Aggressive');
+
 % take out outliers
 %{
 for f = 1:size(glide_path,1)
     ratio{f,1}(find(abs(ratio{f,1}(:,1))>10),:) = [];  
     ratio{f,1}(find(ratio{f,1}(:,1)<0),:) = [];  
 end
-%}
+
 figure(1);
 num = 1;
 
@@ -66,6 +90,7 @@ end
 
 %figure(2);
 %bar(ratio_tot);
+%}
 
 %% Next Steps
 %{
