@@ -16,7 +16,7 @@ filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar
 #filepath_haocheng = "Desktop/MIT/Fall2018/Proseminar/data/clean data/data.xlsx"
 
 dt1 <- read_excel(filepath_viktor)
-dt1$Dates = as.Date(dt1$Dates,"%Y-%m-%d")
+#dt1$Dates = as.Date(dt1$Dates,"%Y-%m-%d")
 ```
 
 Function 1:
@@ -231,6 +231,9 @@ path_FI <- gene_path[[2]]
 results_hist = SORR_to_coverage_dist(path_equity = path_equity,path_FI = path_FI, a=0.6,e=100000,x=0.04,n=342,m=100000)
 results_utility = coverage_to_utility_dist(results_hist,gamma = 0.9999, lambda = 10, m = 100000)
 
+median_utility = round(mean(results_utility),2)
+sd_utility = round(sd(results_utility),2)
+
 #hist(results_hist, breaks = 12, xlab = 'Coverage Ratio', main = 'SORR=0.7 / Equity proportion = 0.6')
-hist(results_utility, breaks = 12, xlab = 'Utility Coverage Ratio', main = 'Median =  / Standard deviation = ')
+hist(results_utility, breaks = 12, xlab = 'Utility Coverage Ratio', main = paste(c('Mean = ',  median_utility, ' / Standard deviation = ', sd_utility), collapse = ''))
 ```
