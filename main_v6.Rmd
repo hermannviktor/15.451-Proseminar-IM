@@ -13,10 +13,10 @@ Read in data
 library(readxl)
 filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
 filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
-#'/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/data.xlsx'
-#filepath_haocheng = "Desktop/MIT/Fall2018/Proseminar/data/clean data/data.xlsx"
+#'/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
+
 dt1 <- read_excel(filepath_haocheng)
-#dt1$Dates = as.Date(dt1$Dates,"%Y-%m-%d")
+
 ```
 
 Function 1:
