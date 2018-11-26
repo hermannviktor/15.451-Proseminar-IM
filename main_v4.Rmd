@@ -87,6 +87,7 @@ output: average coverage ratio for given glidepath and SORR
 
 ```{r setup, include=FALSE}
 SORR_to_coverage = function(path_equity,path_FI,a,start_point=0,end_point=0,e,x,n,m) {
+  withdraw = matrix(0,nrow = 1, ncol = n)
   #first glidepath, constant
   glidepath_one = matrix(0,nrow = n, ncol = 2)
   glidepath_one[,1] = a
@@ -142,6 +143,8 @@ input: 1. given return paths of both equity and fixed income for the period of t
 output: coverage ratio distribution for given glidepath and SORR
 ```{r setup, include=FALSE}
 SORR_to_coverage_dist = function(path_equity,path_FI,a,start_point=0,end_point=0,e,x,n,m) {
+  withdraw = matrix(0,nrow = 1, ncol = n)
+  
   #first glidepath, constant
   glidepath_one = matrix(0,nrow = n, ncol = 2)
   glidepath_one[,1] = a
@@ -188,26 +191,46 @@ SORR_to_coverage_dist = function(path_equity,path_FI,a,start_point=0,end_point=0
 }
 ```
 
+Function: Utility coverage
+
+```{r setup, include=FALSE}
+coverage_to_utility_dist = function(coverage_ratio, gamma, lambda,m) {
+  utility = matrix(0,nrow = 1, ncol = m)
+  for (i in 1:length(coverage_ratio)){
+  if (coverage_ratio[1,i] >= 1){
+    utility[1,i] = (coverage_ratio[1,i]^(1 - gamma) - 1) / (1 - gamma)
+  }
+  else{
+    utility[1,i] = ((1^(1 - gamma) - 1) / (1 - gamma)) - lambda*(1 - coverage_ratio[1,i])
+  }
+  }
+  return(utility)
+}
+```
+
 Run code
 
 ```{r setup, include=FALSE}
-gene_path <- Simulated_Path_Given_SORR(0.7,100000)
+gene_path <- Simulated_Path_Given_SORR(0.3,100000)
 path_equity <- gene_path[[1]]
 path_FI <- gene_path[[2]]
 
-
+################## NOT NECESSARY ########################
 #test on different allocation
-results = matrix(0,nrow=1,ncol=100)
-for (i in 1:100) {
-  a = i/100
-  results[i] = SORR_to_coverage(path_equity,path_FI,a,0.2,0.5,100000,0.04,342,100)
-}
+#results = matrix(0,nrow=1,ncol=100)
+#for (i in 1:100) {
+#  a = i/100
+#  results[i] = SORR_to_coverage(path_equity,path_FI,a,0.2,0.5,100000,0.04,342,100)
+#}
 
-hist(results)
-plot(results[1,],type='l')
-
+#hist(results)
+#plot(results[1,],type='l')
+#########################################################
 
 #plot coverage ratio histogram for given SORR and glidepath
-results_hist = SORR_to_coverage_dist(path_equity = path_equity,path_FI = path_FI, a=0.6,e=100000,x=0.04,n=342,m=10000)
-hist(results_hist, breaks = 12, xlab = 'Coverage Ratio', main = 'SORR=0.7 / Equity proportion = 0.6')
+results_hist = SORR_to_coverage_dist(path_equity = path_equity,path_FI = path_FI, a=0.6,e=100000,x=0.04,n=342,m=100000)
+results_utility = coverage_to_utility_dist(results_hist,gamma = 0.9999, lambda = 10, m = 100000)
+
+#hist(results_hist, breaks = 12, xlab = 'Coverage Ratio', main = 'SORR=0.7 / Equity proportion = 0.6')
+hist(results_utility, breaks = 12, xlab = 'Utility Coverage Ratio', main = 'Median =  / Standard deviation = ')
 ```
