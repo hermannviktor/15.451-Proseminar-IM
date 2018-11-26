@@ -4,7 +4,12 @@ library('readxl')
 # first column date
 # second column equity return
 # fourth column fixed income return
-dt1 <- read_excel("Desktop/MIT/Fall2018/Proseminar/data/clean data/data.xlsx")
+library(readxl)
+
+filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/data.xlsx'
+#filepath_haocheng = "Desktop/MIT/Fall2018/Proseminar/data/clean data/data.xlsx"
+
+dt1 <- read_excel(filepath_viktor)
 dt1$Dates = as.Date(dt1$Dates,"%Y-%m-%d")
 
 
