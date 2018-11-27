@@ -243,9 +243,9 @@ num_path = 10000
 
 SORR_risk = 0.2
 
-initial_value_retirement = 100000
+initial_value_retirement = 300000
 
-percent_year_withdrawal = 0.04
+percent_year_withdrawal = 0.13
 
 gamma_input = 0.9999
 
@@ -253,7 +253,7 @@ lambda_input = 10
 
 portion_equity = 0.6
 
-coverage_or_utility = 'utility' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
+coverage_or_utility = 'coverage' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
 ```
 
 
