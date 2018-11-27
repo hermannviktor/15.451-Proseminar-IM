@@ -242,11 +242,11 @@ General inputs:
 ```{r setup, include=FALSE}
 num_path = 10000
 
-SORR_risk = 0.2
+SORR_risk = 0.7
 
-initial_value_retirement = 300000
+initial_value_retirement = 1000000
 
-percent_year_withdrawal = 0.13
+percent_year_withdrawal = 0.04
 
 gamma_input = 0.9999
 
@@ -288,7 +288,7 @@ results_hist = SORR_to_coverage_dist(path_equity = path_equity,
                                      n = 360,
                                      m = num_path)
 
-results_utility = coverage_to_utility_dist(results_hist,
+results_utility = coverage_to_utility(results_hist,
                                            gamma = gamma_input,
                                            lambda = lambda_input,
                                            m = num_path)
@@ -301,6 +301,7 @@ if (coverage_or_utility == 'coverage'){
   hist(results_hist,
      breaks = 50,
      xlab = 'Coverage Ratio',
+     freq = FALSE,
      main = paste(c('Mean = ', median_hist,
                     ' / SD = ', sd_hist,
                     ' / Skew = ', skew_hist,
@@ -314,6 +315,7 @@ if (coverage_or_utility == 'coverage'){
   hist(results_utility,
      breaks = 50,
      xlab = 'Utility Coverage Ratio',
+     freq = FALSE,
      main = paste(c('Mean = ', median_utility,
                     ' / SD = ', sd_utility,
                     ' / Skew = ', skew_utility,
@@ -326,7 +328,7 @@ Show Income Effect depending on SORR
 
 ```{r setup, include=FALSE}
 SORR_to_coverage_fix = function(path_equity,path_FI,path_Inflation,a,start_point=0,end_point=0,e,n,m) {
-withdraw = matrix(0,nrow = n, ncol = m)
+  withdraw = matrix(0,nrow = n, ncol = m)
   
   #first glidepath, constant
   glidepath_one = matrix(0,nrow = n, ncol = 2)
@@ -408,5 +410,4 @@ matplot(t(output_num),
         xlab = 'Income (in $100k)',
         ylab = 'Coverage Ratio',
         main = 'With Annual Withdrawal of $40,000 p.a.')
-
 ```
