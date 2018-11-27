@@ -16,10 +16,10 @@ library(moments)
 library(ggplot2)
 
 #filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
-#filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
-filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
+filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
+#filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
 
-dt1 <- read_excel(filepath_viktor)
+dt1 <- read_excel(filepath_haocheng)
 
 ```
 
@@ -87,6 +87,31 @@ path_Inflation <- gene_path[[3]]
 ```
 
 Function 2:
+generate glidepath
+mode 1: constant weight
+mode 2: constantly changing weight
+
+```{r}
+gene_glidepath = function(mode,constant,start,end) {
+  # mode = 1; constant weight for equity 
+  glidepath = matrix(0,nrow = n, ncol = 2)
+  if (mode == 1) {
+    glidepath[,1] = constant
+    glidepath[,2] = 1-constant
+  }
+  
+  # mode = 2; constantly changing weight 
+  if (mode == 2) {
+    rate = (end - start)/360  #changing rate
+    glidepath[,1] = seq(from = start+rate, to = end, by = rate)
+    glidepath[,2] = 1-glidepath[,1]
+  }
+  return(glidepath)
+}
+```
+
+
+Function 3:
 input: 1. given return paths of equity, fixed income, inflation for the period of time
        2. asset allocation glidepath
        3. retirement fund starting balance and withdraw rate
@@ -95,19 +120,9 @@ input: 1. given return paths of equity, fixed income, inflation for the period o
 output: average coverage ratio for given glidepath and SORR
 
 ```{r setup, include=FALSE}
-SORR_to_coverage = function(path_equity,path_FI,path_Inflation,a,start_point=0,end_point=0,e,x,n,m) {
-withdraw = matrix(0,nrow = n, ncol = m)
-  
-  #first glidepath, constant
-  glidepath_one = matrix(0,nrow = n, ncol = 2)
-  glidepath_one[,1] = a
-  glidepath_one[,2] = 1-a
-  
-  #second glidepath
-  glidepath_two = matrix(0,nrow = n, ncol = 2)
-  rate = (end_point - start_point)/n  #changing rate
-  glidepath_two[,1] = seq(from = start_point, to = end_point-rate, by = rate)
-  glidepath_two[,2] = 1-glidepath_two[,1]
+SORR_to_coverage = 
+  function(path_equity,path_FI,path_Inflation,glidepath_one,e,x,n,m) {
+  withdraw = matrix(0,nrow = n, ncol = m)
   
   init = e*x/12
   withdraw[1,] = init
@@ -124,7 +139,7 @@ withdraw = matrix(0,nrow = n, ncol = m)
   #calculate wealth position at specific time point after withdraw
   for (j in 1:m) {
     for (i in 2:n) {
-      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath_one[i,1] + (1+path_FI[i,j])*glidepath_one[i,2])) - withdraw[i,j]   #change glide path to 2
+      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath[i,1] + (1+path_FI[i,j])*glidepath[i,2])) - withdraw[i,j]   
     }
   }
   
@@ -143,11 +158,11 @@ withdraw = matrix(0,nrow = n, ncol = m)
   
   cover_ratio = mean(cover)
   
-  return(cover_ratio)
+  return(cover)
 }
 ```
 
-Function 3:
+Function 4:
 input: 1. given return paths of equity, fixed income, inflation for the period of time
        2. asset allocation glidepath
        3. retirement fund starting balance and withdraw rate
@@ -155,19 +170,8 @@ input: 1. given return paths of equity, fixed income, inflation for the period o
 
 output: coverage ratio distribution for given glidepath and SORR
 ```{r setup, include=FALSE}
-SORR_to_coverage_dist = function(path_equity,path_FI,path_Inflation,a,start_point=0,end_point=0,e,x,n,m) {
+SORR_to_coverage_dist = function(path_equity,path_FI,path_Inflation,glidepath_one,e,x,n,m) {
   withdraw = matrix(0,nrow = n, ncol = m)
-  
-  #first glidepath, constant
-  glidepath_one = matrix(0,nrow = n, ncol = 2)
-  glidepath_one[,1] = a
-  glidepath_one[,2] = 1-a
-  
-  #second glidepath
-  glidepath_two = matrix(0,nrow = n, ncol = 2)
-  rate = (end_point - start_point)/n  #changing rate
-  glidepath_two[,1] = seq(from = start_point, to = end_point-rate, by = rate)
-  glidepath_two[,2] = 1-glidepath_two[,1]
   
   init = e*x/12
   withdraw[1,] = init
@@ -184,7 +188,7 @@ SORR_to_coverage_dist = function(path_equity,path_FI,path_Inflation,a,start_poin
   #calculate wealth position at specific time point after withdraw
   for (j in 1:m) {
     for (i in 2:n) {
-      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath_one[i,1] + (1+path_FI[i,j])*glidepath_one[i,2])) - withdraw[i,j]   #change glide path to 2
+      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath[i,1] + (1+path_FI[i,j])*glidepath[i,2])) - withdraw[i,j]   
     }
   }
   
@@ -207,7 +211,8 @@ SORR_to_coverage_dist = function(path_equity,path_FI,path_Inflation,a,start_poin
 }
 ```
 
-Function: Utility to coverage
+Function 5: 
+coverage distribution to Utility distribution 
 
 ```{r setup, include=FALSE}
 coverage_dist_to_utility_dist = function(coverage_ratio, gamma, lambda,m) {
@@ -222,7 +227,12 @@ coverage_dist_to_utility_dist = function(coverage_ratio, gamma, lambda,m) {
   }
   return(utility)
 }
+```
 
+Function 6:
+mean Coverage ratio to utility
+
+```{r setup, include=FALSE}
 coverage_to_utility = function(coverage_ratio, gamma, lambda) {
   if (coverage_ratio >= 1){
     utility = (coverage_ratio^(1 - gamma) - 1) / (1 - gamma)
@@ -240,9 +250,9 @@ coverage_to_utility = function(coverage_ratio, gamma, lambda) {
 General inputs:
 
 ```{r setup, include=FALSE}
-num_path = 100000
+num_path = 10000
 
-SORR_risk = 0.7
+SORR_risk = 0.5
 
 initial_value_retirement = 1000000
 
@@ -253,19 +263,25 @@ gamma_input = 0.9999
 lambda_input = 10
 
 portion_equity = 0.6
+portion_equity_start = 0.6 # 100-65
+portion_equity_end = 0.3 # 100-95
 
-coverage_or_utility = 'coverage' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
+coverage_or_utility = 'utility' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
 ```
 
 
 Run code
 
 ```{r setup, include=FALSE}
+# simulate monte carlo paths for given SORR
 gene_path <- Simulated_Path_Given_SORR(SORR_risk,
                                        num_path)
 path_equity <- gene_path[[1]]
 path_FI <- gene_path[[2]]
 path_Inflation <- gene_path[[3]]
+
+# generate glidepath
+glidepath = gene_glidepath(mode = 2, start=portion_equity_start, end = portion_equity_end)
 
 ################## NOT NECESSARY ########################
 #test on different allocation
@@ -282,7 +298,7 @@ path_Inflation <- gene_path[[3]]
 results_hist = SORR_to_coverage_dist(path_equity = path_equity,
                                      path_FI = path_FI,
                                      path_Inflation = path_Inflation,
-                                     a = portion_equity,
+                                     glidepath = glidepath,
                                      e = initial_value_retirement,
                                      x = percent_year_withdrawal,
                                      n = 360,
@@ -327,56 +343,6 @@ if (coverage_or_utility == 'coverage'){
 Show Income Effect depending on SORR
 
 ```{r setup, include=FALSE}
-SORR_to_coverage_fix = function(path_equity,path_FI,path_Inflation,a,start_point=0,end_point=0,e,n,m) {
-  withdraw = matrix(0,nrow = n, ncol = m)
-  
-  #first glidepath, constant
-  glidepath_one = matrix(0,nrow = n, ncol = 2)
-  glidepath_one[,1] = a
-  glidepath_one[,2] = 1-a
-  
-  #second glidepath
-  glidepath_two = matrix(0,nrow = n, ncol = 2)
-  rate = (end_point - start_point)/n  #changing rate
-  glidepath_two[,1] = seq(from = start_point, to = end_point-rate, by = rate)
-  glidepath_two[,2] = 1-glidepath_two[,1]
-  
-  init = (40000 / 12)
-  withdraw[1,] = init
-  
-  for (i in 2:nrow(dt)) {
-    for (j in 1:ncol(path_Inflation)) {
-      withdraw[i,j] = withdraw[i-1,j] * (1+path_Inflation[i,j])
-    }
-  }
-  
-  wealth = matrix(0,nrow = n, ncol = m)
-  wealth[1,] = e
-  
-  #calculate wealth position at specific time point after withdraw
-  for (j in 1:m) {
-    for (i in 2:n) {
-      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath_one[i,1] + (1+path_FI[i,j])*glidepath_one[i,2])) - withdraw[i,j]   #change glide path to 2
-    }
-  }
-  
-  
-  # calculate coverage ratio for every path
-  # if wealth at 30 year is still positive, coverage ratio > 1
-  cover = matrix(0, nrow = 1, ncol = m)
-  for (i in 1:m) {
-    if (wealth[nrow(wealth),i]<0) {
-      cover[i] = sum(wealth[,i]>0)/n
-    }
-    else {
-      cover[i] = (n+(wealth[nrow(wealth),i]/init))/n
-    }
-  }
-  
-  cover_ratio = mean(cover)
-  
-  return(cover_ratio)
-}
 
 ################################## Code for plotting - DO NOT RUN UNLESS NECESSARY #############################
 # for output_num: columns are the 10 income levels, rows are the 10 SORR risk
