@@ -10,13 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 Read in data
 
 ```{r setup, include=FALSE}
+#install.packages('moments')
 library(readxl)
-filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
-filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
-#'/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/data.xlsx'
-#filepath_haocheng = "Desktop/MIT/Fall2018/Proseminar/data/clean data/data.xlsx"
-dt1 <- read_excel(filepath_haocheng)
-#dt1$Dates = as.Date(dt1$Dates,"%Y-%m-%d")
+library(moments)
+
+#filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
+#filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
+filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
+
+dt1 <- read_excel(filepath_viktor)
+
 ```
 
 Function 1:
@@ -233,35 +236,87 @@ coverage_to_utility = function(coverage_ratio, gamma, lambda) {
 
 ```
 
+General inputs:
+
+```{r setup, include=FALSE}
+num_path = 10000
+
+SORR_risk = 0.2
+
+initial_value_retirement = 100000
+
+percent_year_withdrawal = 0.04
+
+gamma_input = 0.9999
+
+lambda_input = 10
+
+portion_equity = 0.6
+
+coverage_or_utility = 'utility' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
+```
+
+
 Run code
 
 ```{r setup, include=FALSE}
-gene_path <- Simulated_Path_Given_SORR(0.3,100000)
+gene_path <- Simulated_Path_Given_SORR(SORR_risk,
+                                       num_path)
 path_equity <- gene_path[[1]]
 path_FI <- gene_path[[2]]
 path_Inflation <- gene_path[[3]]
 
-##########################################
-# plot Utility vs. equity weight
-# test on different allocation
-# for given SORR, every glidepath will produce one utility value
-results_mean_cover = matrix(0,nrow=1,ncol=100)
-results_mean_utility = matrix(0,nrow=1,ncol=100)
-for (i in 1:100) {
-  a = i/100
-  results_mean_cover[i] = SORR_to_coverage(path_equity,path_FI,path_Inflation,a,0.2,0.5,100000,0.04,360,100000)
-  results_mean_utility[i] = 
-coverage_to_utility(results_mean_cover[i],gamma = 0.9999, lambda = 10)
-}
-
-
-plot(results_mean_utility,type='l')
+################## NOT NECESSARY ########################
+#test on different allocation
+#results = matrix(0,nrow=1,ncol=100)
+#for (i in 1:100) {
+#  a = i/100
+#  results[i] = SORR_to_coverage(path_equity,path_FI,a,0.2,0.5,100000,0.04,342,100)
+#}
+#hist(results)
+#plot(results[1,],type='l')
 #########################################################
 #plot coverage ratio histogram for given SORR and glidepath
-results_hist = SORR_to_coverage_dist(path_equity = path_equity,path_FI = path_FI, path_Inflation = path_Inflation, a=0.6,e=100000,x=0.04,n=360,m=100000)
-results_utility = coverage_to_utility_dist(results_hist,gamma = 0.9999, lambda = 10, m = 100000)
-median_utility = round(mean(results_utility),2)
-sd_utility = round(sd(results_utility),2)
-#hist(results_hist, breaks = 12, xlab = 'Coverage Ratio', main = 'SORR=0.7 / Equity proportion = 0.6')
-hist(results_utility, breaks = 12, xlab = 'Utility Coverage Ratio', main = paste(c('Mean = ',  median_utility, ' / Standard deviation = ', sd_utility), collapse = ''))
+
+results_hist = SORR_to_coverage_dist(path_equity = path_equity,
+                                     path_FI = path_FI,
+                                     path_Inflation = path_Inflation,
+                                     a = portion_equity,
+                                     e = initial_value_retirement,
+                                     x = percent_year_withdrawal,
+                                     n = 360,
+                                     m = num_path)
+
+results_utility = coverage_to_utility_dist(results_hist,
+                                           gamma = gamma_input,
+                                           lambda = lambda_input,
+                                           m = num_path)
+
+if (coverage_or_utility == 'coverage'){
+  median_hist = round(mean(results_hist),2)
+  sd_hist = round(sd(results_hist),2)
+  skew_hist = round(skewness(t(results_hist)),2)
+  kurtosis_hist = round(kurtosis(t(results_hist)),2)
+  hist(results_hist,
+     breaks = 50,
+     xlab = 'Coverage Ratio',
+     main = paste(c('Mean = ', median_hist,
+                    ' / SD = ', sd_hist,
+                    ' / Skew = ', skew_hist,
+                    ' / Kurtosis = ', kurtosis_hist),
+                  collapse = ''))
+} else{
+  median_utility = round(mean(results_utility),2)
+  sd_utility = round(sd(results_utility),2)
+  skew_utility = round(skewness(t(results_utility)),2)
+  kurtosis_utility = round(kurtosis(t(results_utility)),2)
+  hist(results_utility,
+     breaks = 50,
+     xlab = 'Utility Coverage Ratio',
+     main = paste(c('Mean = ', median_utility,
+                    ' / SD = ', sd_utility,
+                    ' / Skew = ', skew_utility,
+                    ' / Kurtosis = ', kurtosis_utility),
+                  collapse = ''))
+}
 ```
