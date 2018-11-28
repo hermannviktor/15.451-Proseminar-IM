@@ -1,0 +1,28 @@
+function [output] = gen_ret_path_sorr(ret_e, ret_fi, infl, n, sorr, w)
+%Generate paths of returns of certain sorr
+%   Paths where good returns happen first, bad returns first and average
+
+row = randi(size(ret_e,1), [n, 1]);
+
+path(:,1) = ret_e(row,1);
+path(:,2) = ret_fi(row,1);
+path(:,3) = infl(row,1);
+
+b = 0.3;
+[~, ind] = sort(path(:,1), 'ascend');
+t = n*b; 
+bot_ret = path(ind<=t,:);
+top_ret = path(~(ind<=t),:);
+
+bot_num = round(t*sorr);
+bot_row = randi(size(bot_ret,1), [bot_num, 1]);
+ind = ismember((1:size(bot_ret))', bot_row);
+top_num = 
+
+bot_path = bot_ret(ind);
+top_path = bot_ret(~ind);
+
+
+
+end
+
