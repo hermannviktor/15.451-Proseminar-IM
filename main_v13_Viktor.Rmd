@@ -317,7 +317,7 @@ General inputs:
 ```{r setup, include=FALSE}
 num_path = 100000
 
-SORR_risk = 0.7
+SORR_risk = 0.5
 
 initial_value_retirement = 1000000
 
