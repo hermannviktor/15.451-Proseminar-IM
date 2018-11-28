@@ -14,12 +14,13 @@ Read in data
 library(readxl)
 library(moments)
 library(ggplot2)
+library(FinancialMath)
 
 #filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
-filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
-#filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
+#filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
+filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
 
-dt1 <- read_excel(filepath_haocheng)
+dt1 <- read_excel(filepath_viktor)
 
 ```
 
@@ -321,7 +322,7 @@ General inputs:
 ```{r setup, include=FALSE}
 num_path = 10000
 
-SORR_risk = 0.5
+SORR_risk = 0.7
 
 initial_value_retirement = 1000000
 
@@ -332,8 +333,8 @@ gamma_input = 0.9999
 lambda_input = 10
 
 portion_equity = 0.6
-portion_equity_start = 0.3 # 100-65
-portion_equity_end = 0.6 # 100-95
+portion_equity_start = 100 - 65 #0.6 # 100-65
+portion_equity_end = 100 - 95 #0.3 # 100-95
 
 coverage_or_utility = 'utility' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
 ```
@@ -350,7 +351,7 @@ path_FI <- gene_path[[2]]
 path_Inflation <- gene_path[[3]]
 
 # generate glidepath
-glidepath = gene_glidepath(mode = 2, start=portion_equity_start, end = portion_equity_end)
+glidepath = gene_glidepath(mode = 1, constant = portion_equity)
 
 ################## NOT NECESSARY ########################
 #test on different allocation
@@ -415,8 +416,6 @@ output: utility or coverage graph for CPPI Strategy
 
 
 ```{r setup, include=FALSE}
-library(FinancialMath)
-
 CPPI_strategy = function(yearly_floor, time_years, interest_rate, path_equity,path_FI,
                          path_Inflation, e,x,n,m) {
   
@@ -499,26 +498,12 @@ results_utility = coverage_dist_to_utility_dist(results_hist,
                                                 lambda = lambda_input,
                                                 m = num_path)
 
-if (coverage_or_utility == 'coverage'){
-  median_hist = round(mean(results_hist),2)
-  sd_hist = round(sd(results_hist),2)
-  skew_hist = round(skewness(t(results_hist)),2)
-  kurtosis_hist = round(kurtosis(t(results_hist)),2)
-  hist(results_hist,
-     breaks = 50,
-     xlab = 'Coverage Ratio',
-     freq = FALSE,
-     main = paste(c('Mean = ', median_hist,
-                    ' / SD = ', sd_hist,
-                    ' / Skew = ', skew_hist,
-                    ' / Kurtosis = ', kurtosis_hist),
-                  collapse = ''))
-} else{
-  median_utility = round(mean(results_utility),2)
-  sd_utility = round(sd(results_utility),2)
-  skew_utility = round(skewness(t(results_utility)),2)
-  kurtosis_utility = round(kurtosis(t(results_utility)),2)
-  hist(results_utility,
+
+median_utility = round(mean(results_utility),2)
+sd_utility = round(sd(results_utility),2)
+skew_utility = round(skewness(t(results_utility)),2)
+kurtosis_utility = round(kurtosis(t(results_utility)),2)
+hist(results_utility,
      breaks = 50,
      xlab = 'Utility Coverage Ratio',
      freq = FALSE,
@@ -527,7 +512,6 @@ if (coverage_or_utility == 'coverage'){
                     ' / Skew = ', skew_utility,
                     ' / Kurtosis = ', kurtosis_utility),
                   collapse = ''))
-
 ```
 
 
