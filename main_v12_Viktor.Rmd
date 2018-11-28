@@ -1,0 +1,544 @@
+---
+title: "main_v5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in data
+
+```{r setup, include=FALSE}
+#install.packages('moments')
+library(readxl)
+library(moments)
+library(ggplot2)
+library(FinancialMath)
+
+#filepath_ellie = "/Users/EllieLiu/Desktop/Monthly_returns.xlsx"
+#filepath_haocheng = '/Users/haochengtang/Desktop/MIT/Fall2018/Proseminar/data/clean\ data/Monthly_returns.xlsx'
+filepath_viktor = '/Users/hermannviktor/Python/PycharmProjects/15.451-Proseminar-IM/Excel/Monthly_returns.xlsx'
+
+dt1 <- read_excel(filepath_viktor)
+
+```
+
+Function 1:
+input: 1. hitorical return data
+       2. SORR 
+       3. number of paths needed
+
+output: return paths for equity and equity
+        path_equity and path_FI are matrices with 342 rows (days of period) and n columns (number of path)
+        
+```{r setup, include=FALSE}
+dt = dt1[, c(2,3,4)]
+dt = dt[sample(1:nrow(dt), size = 360, replace = FALSE),]
+colnames(dt) <- c("equity","FI","Inflation")
+
+base = dt[order(dt$equity),]
+n = nrow(base) 
+equity_return = base$equity
+FI_return = base$FI
+Inflation = base$Inflation
+
+size_bad_return = floor(0.3*n)
+size_ok_return = n-size_bad_return
+Simulated_Path_Given_SORR =
+  function(sorr,m){
+    index_bad = 1:floor(0.3*n) #108 periods
+    index_ok = (floor(0.3*n)+1):n
+    rand_index = matrix(0, nrow = n, ncol = m)
+    path_equity = matrix(0, nrow = n, ncol = m)
+    path_FI = matrix(0, nrow = n, ncol = m)
+    path_Inflation = matrix(0, nrow = n, ncol = m)
+    
+    for(i in 1:m){
+      left_bad = sample(index_bad, size = floor(sorr*size_bad_return))
+      right_bad = setdiff(index_bad, left_bad)
+      left_ok = sample(index_ok, size = (1/2*n - floor(sorr*size_bad_return)))
+      right_ok = setdiff(index_ok, left_ok)
+      left = c(left_bad, left_ok)
+      right = c(right_bad, right_ok)
+      
+      #rand_index[1:(1/2*size_bad_return),i] = left_bad
+      #rand_index[(1/2*n+1):(1/2*n+sorr*size_bad_return),i] = right_bad
+      #rand_index[(1/2*size_bad_return+1):(1/2*n),i] = left_ok
+      #rand_index[(1/2*n+1/2*size_bad_return+1):n,i] = right_ok
+      
+      rand_index[(1:(1/2*n)),i] <- sample(left, size = length(left))
+      rand_index[((1/2*n+1):n),i] <- sample(right, size = length(right))
+    }
+    
+    for (i in 1:m) {
+      for (j in 1:n) {
+        path_equity[j,i] = equity_return[rand_index[j,i]]
+        path_FI[j,i] = FI_return[rand_index[j,i]]
+        path_Inflation[j,i] = Inflation[rand_index[j,i]]
+      }
+    }
+    return(list(path_equity,path_FI,path_Inflation))
+  }
+
+gene_path <- Simulated_Path_Given_SORR(0.5,100)
+path_equity <- gene_path[[1]]
+path_FI <- gene_path[[2]]
+path_Inflation <- gene_path[[3]]
+```
+
+Function 2:
+generate glidepath
+mode 1: constant weight
+mode 2: constantly changing weight
+
+small function (classify): for mean-reversing strategy
+
+```{r}
+gene_glidepath = function(mode,constant,start,end) {
+  
+  #initialize glidepath for storing
+  glidepath = matrix(0,nrow = n, ncol = 2)
+  
+  # mode = 1; constant weight for equity 
+  if (mode == 1) {
+    glidepath[,1] = constant
+    glidepath[,2] = 1-constant
+  }
+  
+  # mode = 2; constantly changing weight 
+  if (mode == 2) {
+    rate = (end - start)/360  #changing rate
+    glidepath[,1] = seq(from = start+rate, to = end, by = rate)
+    glidepath[,2] = 1-glidepath[,1]
+  }
+
+  
+  return(glidepath)
+}
+```
+
+*********
+For mean reversing Dynamic strategy
+two functions incorporated in the block
+*********
+
+```{r}
+glidepath_mr_equity = matrix(0,nrow(path_equity),ncol(path_equity))
+glidepath_mr_FI = matrix(0,nrow(path_FI),ncol(path_FI))
+
+classify<-function(tstat){
+  w<-0
+  # Boundaries
+  if(tstat<=(-1)){w<-.6}
+  if(tstat>=(1)){w<-0}
+  # in between
+  if( (tstat>-1) & (tstat<=-.5) ){w<-.4}
+  if( (tstat>-.5) & (tstat<=.5) ){w<-.3}
+  if( (tstat>.5) & (tstat<=1) ){w<-.2}
+  return(w)
+}
+
+mr<-function(r_stock,r_fi){
+  r_stock = as.vector(r_stock)
+  r_fi = as.vector(r_fi)
+  path<-c()
+  path[1]<-.3
+  t<-c()
+  t[1]<-0
+  n<-length(r_stock)
+  
+  c<-sample(r_stock,(11),FALSE)
+  ret<-c(c,r_stock)
+  h<-sample(r_stock,(11),FALSE)
+  rf<-c(h,r_fi)
+  
+  for(j in 1:(n-1)){
+    r_fi<-c(rf[(j):(11+j)])
+    r_st<-c(ret[(j):(11+j)])
+    s_m<-mean(r_st)
+    s_sig<-sd(r_st)
+    m<-mean(r_fi)
+    t_stat<-((s_m-m)/(s_sig))
+    path[(j+1)]<-classify(t_stat)
+    t[(j+1)]<-t_stat
+  }
+  return(as.vector(path))
+}
+
+for (i in 1:10000) {
+  glidepath_mr_equity[,i] = mr(path_equity[,i],path_FI[,i])
+  glidepath_mr_FI[,i] = 1-glidepath_mr_equity[,i]
+}
+
+#### need to calculate coverage and utility seperately using a different function###
+
+
+
+
+
+
+```
+
+
+Function 3:
+input: 1. given return paths of equity, fixed income, inflation for the period of time
+       2. asset allocation glidepath
+       3. retirement fund starting balance and withdraw rate
+       4. number of paths
+
+output: average coverage ratio for given glidepath and SORR
+
+```{r setup, include=FALSE}
+SORR_to_coverage = 
+  function(path_equity,path_FI,path_Inflation,glidepath_one,e,x,n,m) {
+  withdraw = matrix(0,nrow = n, ncol = m)
+  
+  init = e*x/12
+  withdraw[1,] = init
+  
+  for (i in 2:nrow(dt)) {
+    for (j in 1:ncol(path_Inflation)) {
+      withdraw[i,j] = withdraw[i-1,j] * (1+path_Inflation[i,j])
+    }
+  }
+  
+  wealth = matrix(0,nrow = n, ncol = m)
+  wealth[1,] = e
+  
+  #calculate wealth position at specific time point after withdraw
+  for (j in 1:m) {
+    for (i in 2:n) {
+      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath[i,1] + (1+path_FI[i,j])*glidepath[i,2])) - withdraw[i,j]   
+    }
+  }
+  
+  
+  # calculate coverage ratio for every path
+  # if wealth at 30 year is still positive, coverage ratio > 1
+  cover = matrix(0, nrow = 1, ncol = m)
+  for (i in 1:m) {
+    if (wealth[nrow(wealth),i]<0) {
+      cover[i] = sum(wealth[,i]>0)/n
+    }
+    else {
+      cover[i] = (n+(wealth[nrow(wealth),i]/init))/n
+    }
+  }
+  
+  cover_ratio = mean(cover)
+  
+  return(cover)
+}
+```
+
+Function 4:
+input: 1. given return paths of equity, fixed income, inflation for the period of time
+       2. asset allocation glidepath
+       3. retirement fund starting balance and withdraw rate
+       4. number of paths
+
+output: coverage ratio distribution for given glidepath and SORR
+```{r setup, include=FALSE}
+SORR_to_coverage_dist = function(path_equity,path_FI,path_Inflation,glidepath_one,e,x,n,m) {
+  withdraw = matrix(0,nrow = n, ncol = m)
+  
+  init = e*x/12
+  withdraw[1,] = init
+  
+  for (i in 2:nrow(dt)) {
+    for (j in 1:ncol(path_Inflation)) {
+      withdraw[i,j] = withdraw[i-1,j] * (1+path_Inflation[i,j])
+    }
+  }
+  
+  wealth = matrix(0,nrow = n, ncol = m)
+  wealth[1,] = e
+  
+  #calculate wealth position at specific time point after withdraw
+  for (j in 1:m) {
+    for (i in 2:n) {
+      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*glidepath[i,1] + (1+path_FI[i,j])*glidepath[i,2])) - withdraw[i,j]   
+    }
+  }
+  
+  
+  # calculate coverage ratio for every path
+  # if wealth at 30 year is still positive, coverage ratio > 1
+  cover = matrix(0, nrow = 1, ncol = m)
+  for (i in 1:m) {
+    if (wealth[nrow(wealth),i]<0) {
+      cover[i] = sum(wealth[,i]>0)/n
+    }
+    else {
+      cover[i] = (n+(wealth[nrow(wealth),i]/init))/n
+    }
+  }
+  
+  #cover_ratio = mean(cover)
+  
+  return(cover)
+}
+```
+
+Function 5: 
+coverage distribution to Utility distribution 
+
+```{r setup, include=FALSE}
+coverage_dist_to_utility_dist = function(coverage_ratio, gamma, lambda,m) {
+  utility = matrix(0,nrow = 1, ncol = m)
+  for (i in 1:length(coverage_ratio)){
+  if (coverage_ratio[1,i] >= 1){
+    utility[1,i] = (coverage_ratio[1,i]^(1 - gamma) - 1) / (1 - gamma)
+  }
+  else{
+    utility[1,i] = ((1^(1 - gamma) - 1) / (1 - gamma)) - lambda*(1 - coverage_ratio[1,i])
+  }
+  }
+  return(utility)
+}
+```
+
+Function 6:
+mean Coverage ratio to utility
+
+```{r setup, include=FALSE}
+coverage_to_utility = function(coverage_ratio, gamma, lambda) {
+  if (coverage_ratio >= 1){
+    utility = (coverage_ratio^(1 - gamma) - 1) / (1 - gamma)
+  }
+  else{
+    utility = ((1^(1 - gamma) - 1) / (1 - gamma)) - lambda*(1 - coverage_ratio)
+  }
+  
+  return(utility)
+}
+
+
+```
+
+General inputs:
+
+```{r setup, include=FALSE}
+num_path = 100000
+
+SORR_risk = 0.7
+
+initial_value_retirement = 1000000
+
+percent_year_withdrawal = 0.04
+
+gamma_input = 0.9999
+
+lambda_input = 10
+
+portion_equity = 0.6
+portion_equity_start = 100-65 # 0.6
+portion_equity_end = 100-95 # 0.3
+
+coverage_or_utility = 'utility' # this should either equal to coverage or utility depending on what you would like to plot (will give you different graphs (everything will be automatic))
+```
+
+
+Run code
+
+```{r setup, include=FALSE}
+# simulate monte carlo paths for given SORR
+gene_path <- Simulated_Path_Given_SORR(SORR_risk,
+                                       num_path)
+path_equity <- gene_path[[1]]
+path_FI <- gene_path[[2]]
+path_Inflation <- gene_path[[3]]
+
+# generate glidepath
+glidepath = gene_glidepath(mode = 2, start = portion_equity_start, end = portion_equity_end)
+
+# plotting result
+results_hist = SORR_to_coverage_dist(path_equity = path_equity,
+                                     path_FI = path_FI,
+                                     path_Inflation = path_Inflation,
+                                     glidepath = glidepath,
+                                     e = initial_value_retirement,
+                                     x = percent_year_withdrawal,
+                                     n = 360,
+                                     m = num_path)
+
+results_utility = coverage_dist_to_utility_dist(results_hist,
+                                           gamma = gamma_input,
+                                           lambda = lambda_input,
+                                           m = num_path)
+
+if (coverage_or_utility == 'coverage'){
+  median_hist = round(mean(results_hist),2)
+  sd_hist = round(sd(results_hist),2)
+  skew_hist = round(skewness(t(results_hist)),2)
+  kurtosis_hist = round(kurtosis(t(results_hist)),2)
+  hist(results_hist,
+     breaks = 50,
+     xlab = 'Coverage Ratio',
+     freq = FALSE,
+     main = paste(c('Mean = ', median_hist,
+                    ' / SD = ', sd_hist,
+                    ' / Skew = ', skew_hist,
+                    ' / Kurtosis = ', kurtosis_hist),
+                  collapse = ''))
+} else{
+  median_utility = round(mean(results_utility),2)
+  sd_utility = round(sd(results_utility),2)
+  skew_utility = round(skewness(t(results_utility)),2)
+  kurtosis_utility = round(kurtosis(t(results_utility)),2)
+  hist(results_utility,
+     breaks = 50,
+     xlab = 'Utility Coverage Ratio',
+     freq = FALSE,
+     main = paste(c('Mean = ', median_utility,
+                    ' / SD = ', sd_utility,
+                    ' / Skew = ', skew_utility,
+                    ' / Kurtosis = ', kurtosis_utility),
+                  collapse = ''))
+}
+```
+
+CPPI strategg
+input: return paths for equity, fixed income and inflation
+output: utility or coverage graph for CPPI Strategy
+
+
+```{r setup, include=FALSE}
+CPPI_strategy = function(yearly_floor, time_years, interest_rate, path_equity,path_FI,
+                         path_Inflation, e,x,n,m) {
+  
+  monthly_floor = (yearly_floor / 12)
+  time_months = time_years * 12
+  
+  floor_df = matrix(0, nrow = time_months, ncol = 1)
+  for (i in 1:time_months){
+    floor_df[i,1] = NPV(cf0 = 0,
+                        cf = as.vector(matrix(monthly_floor, nrow = i, ncol = 1)),
+                        times = as.vector(matrix(seq(1,i,1), nrow= i, ncol = 1)),
+                        i = interest_rate,
+                        plot = FALSE)
+  }
+  rev_floor_df = (rev(floor_df))
+  
+  #find inverse return as a coefficient for equity weight
+  inverse_return = matrix(0,nrow=1,ncol=m)
+  for (i in 1:m) {
+    inverse_return[i] = 1/min(path_equity[,i])
+  }
+  
+  #find withdraw for each period
+  withdraw = matrix(0,nrow = n, ncol = m)
+  
+  init = e*x/12
+  withdraw[1,] = init
+  
+  for (i in 2:nrow(dt)) {
+    for (j in 1:ncol(path_Inflation)) {
+      withdraw[i,j] = withdraw[i-1,j] * (1+path_Inflation[i,j])
+    }
+  }
+  
+  #find wealth for each period
+  wealth = matrix(0,nrow = n, ncol = m)
+  C = matrix(0,nrow = n, ncol = m)
+  dollar_eq = matrix(0,nrow = n, ncol = m)
+  
+  wealth[1,] = e
+  C[1,] = e - rev_floor_df[1]
+  
+  #calculate wealth position at specific time point after withdraw
+  for (j in 1:m) {
+    dollar_eq[1,m] = inverse_return[j] * C[1,j]
+    for (i in 2:n) {
+      C[i,j] = wealth[i,j] - rev_floor_df[i]
+      dollar_eq[i,j] = inverse_return[j] * C[i,j]
+      wealth[i,j] = (wealth[i-1,j] * ((1+path_equity[i,j])*dollar_eq[i-1,j]/wealth[i-1,j] + (1+path_FI[i,j])*(1-dollar_eq[i-1,j]/wealth[i-1,j])))-withdraw[i,j]  
+    }
+  }
+  
+  cover = matrix(0, nrow = 1, ncol = m)
+  for (i in 1:m) {
+    if (wealth[nrow(wealth),i]<0) {
+      cover[i] = sum(wealth[,i]>0)/n
+    }
+    else {
+      cover[i] = (n+(wealth[nrow(wealth),i]/init))/n
+    }
+  }
+  
+  return(cover)
+}
+
+
+results_hist = CPPI_strategy(yearly_floor = (initial_value_retirement * percent_year_withdrawal),
+                             time_years = 30,
+                             interest_rate = 0.1,
+                             path_equity = path_equity,
+                             path_FI = path_FI,
+                             path_Inflation = path_Inflation,
+                             e = initial_value_retirement,
+                             x = percent_year_withdrawal,
+                             n = 360,
+                             m = num_path)
+
+results_utility = coverage_dist_to_utility_dist(results_hist,
+                                                gamma = gamma_input,
+                                                lambda = lambda_input,
+                                                m = num_path)
+
+
+median_utility = round(mean(results_utility),2)
+sd_utility = round(sd(results_utility),2)
+skew_utility = round(skewness(t(results_utility)),2)
+kurtosis_utility = round(kurtosis(t(results_utility)),2)
+hist(results_utility,
+     breaks = 50,
+     xlab = 'Utility Coverage Ratio',
+     freq = FALSE,
+     main = paste(c('Mean = ', median_utility,
+                    ' / SD = ', sd_utility,
+                    ' / Skew = ', skew_utility,
+                    ' / Kurtosis = ', kurtosis_utility),
+                  collapse = ''))
+```
+
+
+
+Show Income Effect depending on SORR
+
+```{r setup, include=FALSE}
+
+################################## Code for plotting - DO NOT RUN UNLESS NECESSARY #############################
+# for output_num: columns are the 10 income levels, rows are the 10 SORR risk
+# assumption: yearly withdrawal is 40,000
+output_num = matrix(0,nrow = 10, ncol = 10)
+for (i in 1:10){
+  # generate the paths
+  gene_path <- Simulated_Path_Given_SORR((i / 10),
+                                       num_path)
+  path_equity <- gene_path[[1]]
+  path_FI <- gene_path[[2]]
+  path_Inflation <- gene_path[[3]]
+  for (j in 1:10){
+    # generate the number
+    output_num[i,j] = SORR_to_coverage_fix(path_equity = path_equity,
+                                  path_FI = path_FI,
+                                  path_Inflation = path_Inflation,
+                                  a = portion_equity,
+                                  start_point=0,
+                                  end_point=0,
+                                  e = j * 100000,
+                                  n = 360,
+                                  m = num_path)
+  }
+}
+
+matplot(t(output_num),
+        type = c("b"),
+        pch=1,
+        col = 1:10,
+        xlab = 'Income (in $100k)',
+        ylab = 'Coverage Ratio',
+        main = 'With Annual Withdrawal of $40,000 p.a.')
+```
