@@ -556,7 +556,7 @@ SORR_to_coverage_fix = function(path_equity,path_FI,path_Inflation,a,start_point
 ################################## Code for plotting - DO NOT RUN UNLESS NECESSARY #############################
 # for output_num: columns are the 10 income levels, rows are the 10 SORR risk
 # assumption: yearly withdrawal is 40,000
-portion_equity = 0.6
+portion_equity = 0.1
 num_path = 10000
 output_num = matrix(0,nrow = 10, ncol = 10)
 for (i in 1:10){
@@ -593,7 +593,8 @@ legend(1,
        7,
        c('SORR 0.1','SORR 0.2','SORR 0.3','SORR 0.4','SORR 0.5','SORR 0.6','SORR 0.7','SORR 0.8','SORR 0.9','SORR 1.0'),
        lty=1:10,
-       cex=0.8)
+       cex=0.8,
+       col = c('black', 'red', 'green', 'blue', 'turquoise', 'pink', 'yellow', 'lightblue', 'black', 'red'))
 ##############################################################
 
 ```
